@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Email Routing Demo</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f5f7fb;color:#172033}
+.container{max-width:1050px;margin:40px auto;padding:0 20px}
+.card{background:white;border:1px solid #e3e7ef;border-radius:14px;padding:22px;margin-bottom:20px;box-shadow:0 4px 16px #0000000b}
+h1{margin-bottom:6px}.muted{color:#667085}
+textarea{width:100%;min-height:120px;box-sizing:border-box;border:1px solid #ccd3df;border-radius:10px;padding:12px;font-size:15px}
+button{margin-top:12px;padding:11px 18px;border:0;border-radius:9px;background:#172033;color:white;font-weight:bold;cursor:pointer}
+button.secondary{background:#e9edf5;color:#172033;margin-left:8px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.metric{background:#f8f9fc;padding:15px;border-radius:10px}.metric b{display:block;font-size:22px;margin-top:4px}
+.result{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.item{padding:13px;border:1px solid #e3e7ef;border-radius:9px}.label{font-size:12px;color:#667085;text-transform:uppercase;letter-spacing:.05em}.value{font-weight:bold;margin-top:5px}
+.alert{margin-top:15px;padding:13px;border-radius:9px;background:#fff3cd}
+.success{margin-top:15px;padding:13px;border-radius:9px;background:#eaf7ee}
+@media(max-width:700px){.grid,.result{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h1>AI Email Routing & Urgency Demo</h1>
+    <p class="muted">Portfolio demo — fictional data only. Paste an incoming company email and the workflow classifies, routes, and prioritizes it.</p>
+    <textarea id="email" placeholder="Example: Subject: Permit delay&#10;Hi team, the city requested a revised site plan and we need help before tomorrow's inspection..."></textarea>
+    <button onclick="routeEmail()">Route Email</button>
+    <button class="secondary" onclick="loadExample()">Load Example</button>
+  </div>
+
+  <div class="grid">
+    <div class="metric">Emails Processed<b id="processed">0</b></div>
+    <div class="metric">Urgent Alerts<b id="urgent">0</b></div>
+    <div class="metric">Project Folder<b id="folder">—</b></div>
+    <div class="metric">Assigned To<b id="person">—</b></div>
+  </div>
+
+  <div class="card" id="output" style="display:none">
+    <h2>Routing Result</h2>
+    <div class="result">
+      <div class="item"><div class="label">Category</div><div class="value" id="category"></div></div>
+      <div class="item"><div class="label">Folder</div><div class="value" id="folder2"></div></div>
+      <div class="item"><div class="label">Assigned Person</div><div class="value" id="person2"></div></div>
+      <div class="item"><div class="label">Urgency</div><div class="value" id="urgency"></div></div>
+      <div class="item"><div class="label">Reason</div><div class="value" id="reason"></div></div>
+      <div class="item"><div class="label">Suggested Action</div><div class="value" id="action"></div></div>
+    </div>
+    <div id="notice"></div>
+  </div>
+</div>
+
+<script>
+let processed=0, urgent=0;
+const rules=[
+ {keys:["permit","jurisdiction","city","county","building department","plan check","inspection"],
+  category:"Permits & Jurisdiction",folder:"01 - Permits",person:"Permit Coordinator",action:"Review jurisdiction and permit requirements; update the project tracker."},
+ {keys:["contractor","subcontractor","schedule","install","construction","site"],
+  category:"Construction / Contractor",folder:"02 - Construction",person:"Construction Coordinator",action:"Review contractor request and update the project schedule."},
+ {keys:["invoice","payment","bill","xero","receipt"],
+  category:"Finance",folder:"03 - Finance",person:"Finance Coordinator",action:"Verify the invoice and route for approval."},
+ {keys:["client","homeowner","customer","meeting","call"],
+  category:"Client Communication",folder:"04 - Client",person:"Client Coordinator",action:"Respond or schedule follow-up and update the communication log."},
+ {keys:["design","architect","drawing","plans","blueprint","cad"],
+  category:"Design",folder:"05 - Design",person:"Design Coordinator",action:"Route to the design team and attach/update the project documents."}
+];
+
+function classify(text){
+ let t=text.toLowerCase();
+ let best=rules[0], score=0;
+ for(const r of rules){let s=r.keys.filter(k=>t.includes(k)).length;if(s>score){score=s;best=r;}}
+ let isUrgent=/(urgent|asap|immediately|today|tomorrow|deadline|inspection.*(today|tomorrow)|stop work|critical)/i.test(text);
+ let level=isUrgent?"HIGH":"NORMAL";
+ let reason=isUrgent?"Time-sensitive language or deadline detected.":"No immediate deadline or critical trigger detected.";
+ return {...best,urgency:level,reason};
+}
+function routeEmail(){
+ const text=document.getElementById("email").value.trim();
+ if(!text){alert("Paste an email first.");return;}
+ const r=classify(text);
+ processed++; if(r.urgency==="HIGH") urgent++;
+ document.getElementById("processed").textContent=processed;
+ document.getElementById("urgent").textContent=urgent;
+ document.getElementById("folder").textContent=r.folder;
+ document.getElementById("person").textContent=r.person;
+ for(const id of ["category","folder2","person2","urgency","reason","action"]) document.getElementById(id).textContent=r[id];
+ const notice=document.getElementById("notice");
+ notice.className=r.urgency==="HIGH"?"alert":"success";
+ notice.textContent=r.urgency==="HIGH"?"⚠ ALERT: Notify "+r.person+" immediately.":"✓ Routed successfully. No urgent alert required.";
+ document.getElementById("output").style.display="block";
+}
+function loadExample(){
+ document.getElementById("email").value="Subject: Permit inspection tomorrow\nHi team, the city building department confirmed an inspection for tomorrow and requested the revised site plan today. Please review and let the permit coordinator know ASAP.";
+ routeEmail();
+}
+</script>
+</body>
+</html>
